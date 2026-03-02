@@ -2,26 +2,41 @@ name: CI
 
 on:
   pull_request:
-    branches: [ "dev", "main" ]
+    branches: ["main", "dev"]
   push:
-    branches: [ "dev" ]
+    branches: ["dev"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect Node project
+        id: detect
+        run: |
+          if [ -f package.json ]; then
+            echo "is_node=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_node=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip if not a Node project
+        if: steps.detect.outputs.is_node == 'false'
+        run: echo "No package.json found -> skipping CI."
+
       - name: Setup Node
+        if: steps.detect.outputs.is_node == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        if: steps.detect.outputs.is_node == 'true'
+        run: npm ci
 
       - name: Build
+        if: steps.detect.outputs.is_node == 'true'
         run: npm run build
